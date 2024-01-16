@@ -77,28 +77,3 @@ resource "aws_s3_bucket_public_access_block" "main_output" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-# Lambda Layers 転送用
-resource "aws_s3_bucket" "lambda-trans" {
-  bucket        = "${var.name}-lambda-trans-bucket"
-  force_destroy = false
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "lambda-trans" {
-  bucket = aws_s3_bucket.lambda-trans.bucket
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "lambda-trans" {
-  bucket = aws_s3_bucket.lambda-trans.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}

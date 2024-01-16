@@ -38,5 +38,3 @@ terraform.rc
 
 *.zip
 .DS_Store
-
-/terraform/lambda_layer

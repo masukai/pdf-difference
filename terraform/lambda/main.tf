@@ -1,27 +1,17 @@
-data "archive_file" "lambda_function_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda_function"
-  output_path = "${path.module}/lambda_function.zip"
-}
-
 resource "aws_lambda_function" "lambda_function" {
-  function_name    = "${var.name}-lambda-function"
-  handler          = "main.lambda_handler"
-  runtime          = "python3.8"
-  filename         = data.archive_file.lambda_function_zip.output_path
-  source_code_hash = data.archive_file.lambda_function_zip.output_base64sha256
-  role             = aws_iam_role.assume_role.arn
-  timeout          = 120
-  memory_size      = 1024
+  function_name = "${var.name}-lambda-function"
+  role          = aws_iam_role.assume_role.arn
+  package_type  = "Image"
+  image_uri     = "041968548333.dkr.ecr.ap-northeast-1.amazonaws.com/pdf-difference-lambda-python:latest" # ハードコード
+  timeout       = 120
+  memory_size   = 1024
+
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
 
   ephemeral_storage {
     size = 10240 # Min 512 MB and the Max 10240 MB
-  }
-
-  environment {
-    variables = {
-      "VAR_NAME" = var.name
-    }
   }
 }
 

@@ -1,0 +1,41 @@
+# Dockerイメージをビルド
+name: Build
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_ROLE_ARN: arn:aws:iam::************:role/pdf-difference-github-action-role # ハードコード修正必要
+  IMAGE_TAG: ${{ github.sha }}
+  REPOSITORY_URI: ************.dkr.ecr.ap-northeast-1.amazonaws.com/pdf-difference-lambda-python # ハードコード修正必要
+  ECR_URL: ************.dkr.ecr.ap-northeast-1.amazonaws.com # ハードコード修正必要
+  AWS_LAMBDA_FUNCTION_NAME: pdf-difference-lambda-python
+
+jobs:
+  test:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.MASUDA_PERSONAL_ACCESS_TOKEN }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-session-name: pdf-difference-github-action-role-${{ github.run_id }} # CloudTrailイベントに表示されるユーザー名
+          aws-region: ap-northeast-1
+
+      - name: Docker Build
+        working-directory: application/lambda
+        run: |
+          aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${{ env.ECR_URL }}
+          docker build -t ${{ env.AWS_LAMBDA_FUNCTION_NAME }} .
+          docker tag ${{ env.AWS_LAMBDA_FUNCTION_NAME }}:latest ${{ env.REPOSITORY_URI }}:latest
+          docker push ${{ env.REPOSITORY_URI }}:latest
+          docker tag ${{ env.AWS_LAMBDA_FUNCTION_NAME }}:latest ${{ env.REPOSITORY_URI }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.REPOSITORY_URI }}:${{ env.IMAGE_TAG }}

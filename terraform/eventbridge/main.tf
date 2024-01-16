@@ -10,7 +10,7 @@ resource "aws_cloudwatch_event_rule" "eventbridge_rule" {
       },
       "object" : {
         "key" : [{
-          "prefix" : "after-file/"
+          "prefix" : var.bucket_input_folder_name
         }]
       }
     }

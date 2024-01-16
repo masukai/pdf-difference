@@ -33,7 +33,8 @@ module "lambda" {
 module "eventbridge" {
   source = "./eventbridge"
 
-  name                = local.name
-  lambda_function_arn = module.lambda.lambda_function_arn
-  bucket_input_name   = module.s3.bucket_input_name
+  name                     = local.name
+  lambda_function_arn      = module.lambda.lambda_function_arn
+  bucket_input_name        = module.s3.bucket_input_name
+  bucket_input_folder_name = module.s3.bucket_input_folder_name
 }

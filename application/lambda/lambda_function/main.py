@@ -13,7 +13,7 @@ import numpy as np
 import cv2
 from pdf2image import convert_from_path
 
-VAR_NAME = os.getenv("VAR_NAME")
+VAR_NAME = "pdf-difference"
 s3 = boto3.client("s3")
 
 
@@ -21,10 +21,11 @@ def lambda_handler(event, context):
     print(event)
     clean_folder()
     add_poppler_path()
-    pdf_to_images()
-    compare_img()
-    find_diff()
-    # clean_folder()
+    image_num = pdf_to_images()
+    compare_img(image_num)
+    find_diff(image_num)
+    clean_folder()
+    # clean_s3()
     return
 
 
@@ -38,7 +39,6 @@ def add_poppler_path():
 
 def pdf_to_images():
     print("pdf_to_images")
-
     objs = get_all_objects_low(VAR_NAME + "-input-bucket")
 
     for _, obj in enumerate(iter(objs)):
@@ -46,58 +46,35 @@ def pdf_to_images():
             continue
         elif "pdf" in obj["Key"]:
             download_from_s3(
-                VAR_NAME + "-input-bucket", obj["Key"], "/tmp/" + obj["Key"]
+                VAR_NAME + "-input-bucket",
+                obj["Key"],
+                "/tmp/" + obj["Key"].replace("/", "-"),
             )
-
-    j, k = 0, 0
-    # PDFファイルのパスを取得し順番に捌いていく
-    for x in glob.glob("/tmp/pdf_file_before/*.pdf"):
-        pdf_path = Path(x)
-
-        # pdfから画像に変換
-        pages = convert_from_path(str(pdf_path), dpi=150)
-        # 画像ファイルを１ページずつ保存
-        image_dir = Path("/tmp/image_file_before")
-        shutil.rmtree(image_dir)
-        os.mkdir(image_dir)
-        for _, page in enumerate(pages):
-            file_name = "{:02d}".format(j + 1) + ".jpg"
-            image_path = image_dir / file_name
-            # JPEGで保存
-            page.save(str(image_path), "JPEG")
-            j += 1
-
-    for x in glob.glob("/tmp/pdf_file_after/*.pdf"):
-        pdf_path = Path(x)
-
-        # pdfから画像に変換
-        pages = convert_from_path(str(pdf_path), dpi=150)
-        # 画像ファイルを１ページずつ保存
-        image_dir = Path("/tmp/image_file_after")
-        shutil.rmtree(image_dir)
-        os.mkdir(image_dir)
-        for _, page in enumerate(pages):
-            file_name = "{:02d}".format(k + 1) + ".jpg"
-            image_path = image_dir / file_name
-            # JPEGで保存
-            page.save(str(image_path), "JPEG")
-            k += 1
-    return
+            j = 0
+            pdf_path = Path("/tmp/" + obj["Key"].replace("/", "-"))
+            # pdfから画像に変換
+            pages = convert_from_path(str(pdf_path), dpi=150)
+            # 画像ファイルを１ページずつ保存
+            if "before" in str(pdf_path):
+                pref = "before"
+            elif "after" in str(pdf_path):
+                pref = "after"
+            else:
+                continue
+            for _, page in enumerate(pages):
+                file_name = "/tmp/image-file-{}-{:02d}.jpg".format(pref, j + 1)
+                # JPEGで保存
+                page.save(str(file_name), "JPEG")
+                j += 1
+    return j
 
 
-def compare_img():
+def compare_img(image_num):
     print("compare_img")
-
-    image_dir = Path("/tmp/image_file_after")
-    for l in range(
-        sum(
-            os.path.isfile(os.path.join(image_dir, name))
-            for name in os.listdir(image_dir)
-        )
-    ):
+    for l in range(image_num):
         # 参照画像(img_ref)と比較画像(img_comp)の読み込み
-        img_ref = cv2.imread("/tmp/image_file_before/{:02d}.jpg".format(l + 1), 1)
-        img_comp = cv2.imread("/tmp/image_file_after/{:02d}.jpg".format(l + 1), 1)
+        img_ref = cv2.imread("/tmp/image-file-before-{:02d}.jpg".format(l + 1), 1)
+        img_comp = cv2.imread("/tmp/image-file-after-{:02d}.jpg".format(l + 1), 1)
 
         akaze = cv2.AKAZE_create()
         ref_kp, ref_des = akaze.detectAndCompute(img_ref, None)
@@ -124,7 +101,7 @@ def compare_img():
         )
 
         cv2.imwrite(
-            "/tmp/matches/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "matches-{:02d}.jpg".format(l + 1),
             matches_img,
         )
 
@@ -147,25 +124,18 @@ def compare_img():
         )
 
         cv2.imwrite(
-            "/tmp/image_warped_before/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "image-warped-before-{:02d}.jpg".format(l + 1),
             warped_before_img,
         )
     return
 
 
-def find_diff():
+def find_diff(image_num):
     print("find_diff")
-
-    image_dir = Path("/tmp/image_file_after")
-    for l in range(
-        sum(
-            os.path.isfile(os.path.join(image_dir, name))
-            for name in os.listdir(image_dir)
-        )
-    ):
+    for l in range(image_num):
         # 参照画像(img_ref)と比較画像(img_comp)の読み込み
-        img_ref = cv2.imread("/tmp/image_warped_before/{:02d}.jpg".format(l + 1), 1)
-        img_comp = cv2.imread("/tmp/image_file_after/{:02d}.jpg".format(l + 1), 1)
+        img_ref = cv2.imread("/tmp/image-warped-before-{:02d}.jpg".format(l + 1), 1)
+        img_comp = cv2.imread("/tmp/image-file-after-{:02d}.jpg".format(l + 1), 1)
         temp_r = img_comp.copy()
         temp_g = img_comp.copy()
         temp_b = img_comp.copy()
@@ -208,66 +178,44 @@ def find_diff():
                 continue
         # 差分画像を保存
         cv2.imwrite(
-            "/tmp/output-file-red/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-red-{:02d}.jpg".format(l + 1),
             temp_r,
         )
         upload_to_s3(
             VAR_NAME + "-output-bucket",
             "output-file-red/" + "{:02d}.jpg".format(l + 1),
-            "/tmp/output-file-red/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-red-{:02d}.jpg".format(l + 1),
         )
         cv2.imwrite(
-            "/tmp/output-file-green/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-green-{:02d}.jpg".format(l + 1),
             temp_g,
         )
         upload_to_s3(
             VAR_NAME + "-output-bucket",
             "output-file-green/" + "{:02d}.jpg".format(l + 1),
-            "/tmp/output-file-green/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-green-{:02d}.jpg".format(l + 1),
         )
         cv2.imwrite(
-            "/tmp/output-file-blue/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-blue-{:02d}.jpg".format(l + 1),
             temp_b,
         )
         upload_to_s3(
             VAR_NAME + "-output-bucket",
             "output-file-blue/" + "{:02d}.jpg".format(l + 1),
-            "/tmp/output-file-blue/" + "{:02d}.jpg".format(l + 1),
+            "/tmp/" + "output-file-blue-{:02d}.jpg".format(l + 1),
         )
     return
 
 
 def clean_folder():
-    if os.path.isfile("/tmp/pdf_file_before"):
-        shutil.rmtree("/tmp/pdf_file_before")
-    os.mkdir("/tmp/pdf_file_before")
-    if os.path.isfile("/tmp/pdf_file_after"):
-        shutil.rmtree("/tmp/pdf_file_after")
-    os.mkdir("/tmp/pdf_file_after")
-    if os.path.isfile("/tmp/image_file_before"):
-        shutil.rmtree("/tmp/image_file_before")
-    os.mkdir("/tmp/image_file_before")
-    if os.path.isfile("/tmp/image_file_after"):
-        shutil.rmtree("/tmp/image_file_after")
-    os.mkdir("/tmp/image_file_after")
-    if os.path.isfile("/tmp/image_warped_before"):
-        shutil.rmtree("/tmp/image_warped_before")
-    os.mkdir("/tmp/image_warped_before")
-    if os.path.isfile("/tmp/image_warped_after"):
-        shutil.rmtree("/tmp/image_warped_after")
-    os.mkdir("/tmp/image_warped_after")
-    if os.path.isfile("/tmp/matches"):
-        shutil.rmtree("/tmp/matches")
-    os.mkdir("/tmp/matches")
-    if os.path.isfile("/tmp/output-file-blue"):
-        shutil.rmtree("/tmp/output-file-blue")
-    os.mkdir("/tmp/output-file-blue")
-    if os.path.isfile("/tmp/output-file-green"):
-        shutil.rmtree("/tmp/output-file-green")
-    os.mkdir("/tmp/output-file-green")
-    if os.path.isfile("/tmp/output-file-red"):
-        shutil.rmtree("/tmp/output-file-red")
-    os.mkdir("/tmp/output-file-red")
+    for file in glob.glob("/tmp/*.pdf"):
+        os.remove(file)
+    for file in glob.glob("/tmp/*.jpg"):
+        os.remove(file)
+    return
+
+
+def clean_s3():
     return
 
 
