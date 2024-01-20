@@ -31,10 +31,8 @@ data "aws_iam_policy_document" "allow_access_s3_role_policy" {
   statement {
     actions = ["s3:*"]
     resources = [
-      "arn:aws:s3:::${var.bucket_input_name}",
-      "arn:aws:s3:::${var.bucket_input_name}/*",
-      "arn:aws:s3:::${var.bucket_output_name}",
-      "arn:aws:s3:::${var.bucket_output_name}/*"
+      "arn:aws:s3:::${var.bucket_name}",
+      "arn:aws:s3:::${var.bucket_name}/*"
     ]
     effect = "Allow"
   }

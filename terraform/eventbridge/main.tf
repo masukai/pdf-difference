@@ -6,7 +6,7 @@ resource "aws_cloudwatch_event_rule" "eventbridge_rule" {
     "source" : ["aws.s3"],
     "detail" : {
       "bucket" : {
-        "name" : [var.bucket_input_name]
+        "name" : [var.bucket_name]
       },
       "object" : {
         "key" : [{

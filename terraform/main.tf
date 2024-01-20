@@ -26,8 +26,7 @@ module "lambda" {
 
   name                      = local.name
   cloudwatch_event_rule_arn = module.eventbridge.cloudwatch_event_rule_arn
-  bucket_input_name         = module.s3.bucket_input_name
-  bucket_output_name        = module.s3.bucket_output_name
+  bucket_name               = module.s3.bucket_name
 }
 
 module "eventbridge" {
@@ -35,6 +34,6 @@ module "eventbridge" {
 
   name                     = local.name
   lambda_function_arn      = module.lambda.lambda_function_arn
-  bucket_input_name        = module.s3.bucket_input_name
+  bucket_name              = module.s3.bucket_name
   bucket_input_folder_name = module.s3.bucket_input_folder_name
 }

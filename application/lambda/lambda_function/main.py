@@ -39,14 +39,14 @@ def add_poppler_path():
 
 def pdf_to_images():
     print("pdf_to_images")
-    objs = get_all_objects_low(VAR_NAME + "-input-bucket")
+    objs = get_all_objects_low(VAR_NAME + "-bucket")
 
     for _, obj in enumerate(iter(objs)):
         if obj["Key"].endswith("/"):
             continue
         elif "pdf" in obj["Key"]:
             download_from_s3(
-                VAR_NAME + "-input-bucket",
+                VAR_NAME + "-bucket",
                 obj["Key"],
                 "/tmp/" + obj["Key"].replace("/", "-"),
             )
@@ -182,7 +182,7 @@ def find_diff(image_num):
             temp_r,
         )
         upload_to_s3(
-            VAR_NAME + "-output-bucket",
+            VAR_NAME + "-bucket",
             "output-file-red/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-red-{:02d}.jpg".format(l + 1),
         )
@@ -191,7 +191,7 @@ def find_diff(image_num):
             temp_g,
         )
         upload_to_s3(
-            VAR_NAME + "-output-bucket",
+            VAR_NAME + "-bucket",
             "output-file-green/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-green-{:02d}.jpg".format(l + 1),
         )
@@ -200,7 +200,7 @@ def find_diff(image_num):
             temp_b,
         )
         upload_to_s3(
-            VAR_NAME + "-output-bucket",
+            VAR_NAME + "-bucket",
             "output-file-blue/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-blue-{:02d}.jpg".format(l + 1),
         )

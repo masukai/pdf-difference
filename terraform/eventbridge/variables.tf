@@ -6,7 +6,7 @@ variable "lambda_function_arn" {
   type = string
 }
 
-variable "bucket_input_name" {
+variable "bucket_name" {
   type = string
 }
 
