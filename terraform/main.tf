@@ -27,6 +27,7 @@ module "lambda" {
   name                      = local.name
   cloudwatch_event_rule_arn = module.eventbridge.cloudwatch_event_rule_arn
   bucket_name               = module.s3.bucket_name
+  ecr_repository_uri        = local.ecr_repository_uri
 }
 
 module "eventbridge" {

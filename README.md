@@ -1,16 +1,16 @@
-# PDF-difference-checker
+# PDF-difference
 
 ## 実行前の確認
 
 - AWS CLI がインストールされている。`~/.aws/credentials`が作成されており、AWS アカウントが登録されている。作成されているフォルダは大抵以下。
 
-```
+```bash
 /Users/~/.aws/credentials
 ```
 
 config は以下のように記述（あくまで一例）。
 
-```
+```bash
 [default]
 region = ap-northeast-1
 
@@ -21,7 +21,7 @@ region = ap-northeast-1
 
 credentials は以下のように記述（あくまで一例）。
 
-```
+```bash
 [default]
 aws_access_key_id = AKIA~~
 aws_secret_access_key = ~~
@@ -109,11 +109,56 @@ docker-compose down --volumes
 
 ## How to Usage
 
+### フロー概略
+
 1. before、after の順で PDF を S3 に保存するようにする
 2. PDF はひとつずつ入れるようにする
 3. (今後対応) S3 に入れるフローを作る
 4. (今後対応) Lambda 起動中は S3 に入れられないようにする
 
+### 注意点
+
+- PDF ファイル名に「before」「after」を入れないこと
+- 「利用中のため使用禁止」のフォルダがあるときは作業しないこと
+- 「利用中のため使用禁止」のフォルダの時刻が 6 分以上経っても残っている場合は不具合が発生している
+- 2 分以内にファイルをダウンロードすること
+
 ## システム構成図
 
 ![pdf-difference](docs/img/pdf-difference.drawio.png)
+
+## IAM ユーザーの発行
+
+pdf-difference-bucket のみにアクセスできる IAM ユーザーを AWS コンソールから発行する。
+
+- IAM ポリシーを作成(最初のみ)。
+  ポリシー名は「pdf-difference-bucket-access」
+
+```bash
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::pdf-difference-bucket",
+                "arn:aws:s3:::pdf-difference-bucket/*"
+            ]
+        }
+    ]
+}
+```
+
+- ユーザーグループを作成(管理しやすいように)。
+  先ほど作ったポリシーを入れて、グループ名は「pdf-difference-users」
+
+- ユーザーを作成し、先ほどで作ったユーザーグループをアタッチする。
+  　一応の命名規則として、pdf.の接頭辞を入れている。
+
+- csv をダウンロードし、利用者に渡す。

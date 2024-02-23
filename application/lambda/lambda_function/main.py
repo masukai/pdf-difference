@@ -8,6 +8,8 @@ from pathlib import Path
 import boto3
 import glob
 import sys
+import datetime
+import time
 
 import numpy as np
 import cv2
@@ -21,12 +23,32 @@ def lambda_handler(event, context):
     print(event)
     clean_folder()
     add_poppler_path()
-    image_num = pdf_to_images()
-    compare_img(image_num)
-    find_diff(image_num)
-    clean_folder()
-    # clean_s3()
-    return
+    useFlag = False
+    response = s3.list_objects_v2(Bucket=VAR_NAME + "-bucket")
+    for object in response["Contents"]:
+        if "利用中のため使用禁止" in object["Key"]:
+            useFlag = True
+    if useFlag:
+        return
+    else:
+        DIFF_JST_FROM_UTC = 9
+        date_now = datetime.datetime.utcnow() + datetime.timedelta(
+            hours=DIFF_JST_FROM_UTC
+        )
+        folder_name = "利用中のため使用禁止-{}/".format(
+            date_now.strftime("%Y年%m月%d日-%H:%M:%S")
+        )
+        print(folder_name)
+        s3.put_object(Bucket=VAR_NAME + "-bucket", Key=folder_name)
+        image_num = pdf_to_images()
+        compare_img(image_num)
+        find_diff(image_num)
+        clean_folder()
+        time.sleep(120)
+        clean_s3()
+        s3.delete_object(Bucket=VAR_NAME + "-bucket", Key=folder_name)
+        useFlag = False
+        return
 
 
 def add_poppler_path():
@@ -183,7 +205,7 @@ def find_diff(image_num):
         )
         upload_to_s3(
             VAR_NAME + "-bucket",
-            "output-file-red/" + "{:02d}.jpg".format(l + 1),
+            "result/output-file-red/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-red-{:02d}.jpg".format(l + 1),
         )
         cv2.imwrite(
@@ -192,7 +214,7 @@ def find_diff(image_num):
         )
         upload_to_s3(
             VAR_NAME + "-bucket",
-            "output-file-green/" + "{:02d}.jpg".format(l + 1),
+            "result/output-file-green/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-green-{:02d}.jpg".format(l + 1),
         )
         cv2.imwrite(
@@ -201,13 +223,14 @@ def find_diff(image_num):
         )
         upload_to_s3(
             VAR_NAME + "-bucket",
-            "output-file-blue/" + "{:02d}.jpg".format(l + 1),
+            "result/output-file-blue/" + "{:02d}.jpg".format(l + 1),
             "/tmp/" + "output-file-blue-{:02d}.jpg".format(l + 1),
         )
     return
 
 
 def clean_folder():
+    print("clean_folder")
     for file in glob.glob("/tmp/*.pdf"):
         os.remove(file)
     for file in glob.glob("/tmp/*.jpg"):
@@ -216,6 +239,13 @@ def clean_folder():
 
 
 def clean_s3():
+    print("clean_s3")
+    response = s3.list_objects_v2(Bucket=VAR_NAME + "-bucket")
+    for object in response["Contents"]:
+        if (".pdf" in object["Key"]) or (".jpg" in object["Key"]):
+            s3.delete_object(
+                Bucket=VAR_NAME + "-bucket", Key="{}".format(object["Key"])
+            )
     return
 
 

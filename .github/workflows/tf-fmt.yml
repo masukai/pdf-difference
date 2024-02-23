@@ -3,7 +3,7 @@ name: Terraform fmt check
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [develop, main]
 
 jobs:
   tf-fmt:
