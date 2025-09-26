@@ -10,6 +10,7 @@ import glob
 import sys
 import datetime
 import time
+import zipfile
 
 import numpy as np
 import cv2
@@ -20,7 +21,9 @@ s3 = boto3.client("s3")
 
 
 def lambda_handler(event, context):
+    set_status("asset/available.png")
     print(event)
+    set_status("asset/notavailable.png")
     clean_folder()
     add_poppler_path()
     useFlag = False
@@ -29,6 +32,7 @@ def lambda_handler(event, context):
         if "利用中のため使用禁止" in object["Key"]:
             useFlag = True
     if useFlag:
+        set_status("asset/notavailable.png")
         return
     else:
         DIFF_JST_FROM_UTC = 9
@@ -43,11 +47,14 @@ def lambda_handler(event, context):
         image_num = pdf_to_images()
         compare_img(image_num)
         find_diff(image_num)
+        make_zip(image_num)
         clean_folder()
+        set_status("asset/result.png")
         time.sleep(120)
         clean_s3()
         s3.delete_object(Bucket=VAR_NAME + "-bucket", Key=folder_name)
         useFlag = False
+        set_status("asset/available.png")
         return
 
 
@@ -229,12 +236,51 @@ def find_diff(image_num):
     return
 
 
+def make_zip(image_num):
+    print("make_zip")
+    for color in ["blue", "green", "red"]:
+        # Lambdaで一時ファイルを扱う場合は/tmp下に配置する
+        zip_path = "/tmp/data_{}.zip".format(color)
+        with open(zip_path, "w") as file:
+            file.write("")
+        # zipファイルを作成する処理
+        with zipfile.ZipFile(
+            zip_path, "a", compression=zipfile.ZIP_DEFLATED
+        ) as new_zip:
+            for l in range(image_num):
+                new_zip.write(
+                    "/tmp/" + "output-file-{}-{:02d}.jpg".format(color, l + 1)
+                )
+        upload_to_s3(
+            VAR_NAME + "-bucket",
+            "result/data_{}.zip".format(color),
+            "/tmp/" + "data_{}.zip".format(color),
+        )
+    return
+
+
 def clean_folder():
     print("clean_folder")
     for file in glob.glob("/tmp/*.pdf"):
         os.remove(file)
     for file in glob.glob("/tmp/*.jpg"):
         os.remove(file)
+    for file in glob.glob("/tmp/*.zip"):
+        os.remove(file)
+    return
+
+
+def set_status(image_name):
+    download_from_s3(
+        VAR_NAME + "-bucket",
+        image_name,
+        "/tmp/" + "status.png",
+    )
+    upload_to_s3(
+        VAR_NAME + "-bucket",
+        "status/status.png",
+        "/tmp/" + "status.png",
+    )
     return
 
 
@@ -242,7 +288,16 @@ def clean_s3():
     print("clean_s3")
     response = s3.list_objects_v2(Bucket=VAR_NAME + "-bucket")
     for object in response["Contents"]:
-        if (".pdf" in object["Key"]) or (".jpg" in object["Key"]):
+        if "asset/" in object["Key"]:
+            print(object["Key"])
+        elif "status/" in object["Key"]:
+            print(object["Key"])
+        elif (
+            (".pdf" in object["Key"])
+            or (".jpg" in object["Key"])
+            or (".png" in object["Key"])
+            or (".zip" in object["Key"])
+        ):
             s3.delete_object(
                 Bucket=VAR_NAME + "-bucket", Key="{}".format(object["Key"])
             )

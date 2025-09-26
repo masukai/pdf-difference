@@ -1,0 +1,32 @@
+name: upload s3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - dist/**
+
+env:
+  AWS_ROLE_ARN: arn:aws:iam::************:role/pdf-difference-github-action-role
+
+jobs:
+  build_and_upload:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-session-name: pdf-difference-github-action-role-${{ github.run_id }} # CloudTrailイベントに表示されるユーザー名
+          aws-region: ap-northeast-1
+      - name: Upload html to S3
+        run: make upload-front
+      - name: Upload image to S3
+        run: make upload-status
