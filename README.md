@@ -56,11 +56,8 @@ terraform apply
 ### GitHub Actions で ECR に Docker image をプッシュ
 
 GitHub にログインし、Actions から build.yml を実行する。
-SECRET_ACCESS_TOKEN の設定は以下を参考。
 
-https://dev.classmethod.jp/articles/github-personal-access-tokens/
-
-### Terraform から AWS に Lambda/S3 をデプロイ ECR からプッシュ
+### Terraform から AWS に Lambda/API Gateway/S3 をデプロイし、 ECR からプッシュ
 
 Terraform から AWS にリソースを作成します。
 `pdf-difference` という AWS プロファイルから認証情報を読み取っています。
@@ -72,6 +69,8 @@ terraform init
 terraform apply
 ```
 
+現状、AWS コンソール上で API Gateway のデプロイが手動で必要となっています。
+
 > [!Warning]
 > AWS から消す・仕舞う・片付けることがしたい場合は
 > 以下のコマンドを利用。
@@ -82,8 +81,19 @@ terraform apply
 ターミナルにて以下を実行。
 
 ```bash
-aws lambda update-function-code --function-name pdf-difference-lambda-function --image-uri ************.dkr.ecr.ap-northeast-1.amazonaws.com/pdf-difference-lambda-python:latest
+make lambda-push
 ```
+
+### 手作業で直している部分
+
+#### index.html に API Gateway のリンクを設定し、GitHub にプッシュする
+
+上記でデプロイした Rest API を post_fetch_xxx.js に貼る作業を実施します。
+
+#### S3 のバケットポリシーによる IP 制限と index.html 及び post_fetch_xxx.js が送れない問題
+
+一旦 IP 制限を解除して`terraform apply`を実施、
+GitHub にて S3 にデータを送れた後に IP 制限をつけて`terraform apply`を再度実施。
 
 ## Step for Develop Application
 
@@ -95,7 +105,7 @@ Docker を起動し、curl を叩く。
 
 ```bash
 cd application
-docker-compose up -d
+docker compose up -d
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
 ```
 
@@ -107,27 +117,11 @@ docker-compose down --volumes
 
 プログラムの更新を行なった場合は、Docker images から削除する必要もある。
 
-## How to Usage
-
-### フロー概略
-
-1. before、after の順で PDF を S3 に保存するようにする
-2. PDF はひとつずつ入れるようにする
-3. (今後対応) S3 に入れるフローを作る
-4. (今後対応) Lambda 起動中は S3 に入れられないようにする
-
-### 注意点
-
-- PDF ファイル名に「before」「after」を入れないこと
-- 「利用中のため使用禁止」のフォルダがあるときは作業しないこと
-- 「利用中のため使用禁止」のフォルダの時刻が 6 分以上経っても残っている場合は不具合が発生している
-- 2 分以内にファイルをダウンロードすること
-
 ## システム構成図
 
 ![pdf-difference](docs/img/pdf-difference.drawio.png)
 
-## IAM ユーザーの発行
+## IAM ユーザーの発行(将来的には廃止)
 
 pdf-difference-bucket のみにアクセスできる IAM ユーザーを AWS コンソールから発行する。
 

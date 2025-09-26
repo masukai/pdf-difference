@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <p><b>PDF差分くん</b></p>
+    <p>
+      <b>使い方</b><br />
+      - 会社にいるときは、会社iPhoneでテザリングして実施してください<br />
+      -
+      「利用状態」が「利用可能」になっていることを確認してください。そのほかのステータスの時は使用を控えてください<br />
+      -
+      「元のファイル(比較対象のファイル)」の「ファイルを選択」にてファイルを選択し、「①送信する」をクリックしてください<br />
+      -
+      「最新のファイル」の「ファイルを選択」にてファイルを選択し、「②送信する」をクリックしてください<br />
+      -
+      6分以内(結構すぐ)にPDFの差分の結果が出てきます(計算中のステータスから変わります)。
+      ブラウザの更新ボタンを何回か押してください(cmd+shift+r)。
+      そして、結果が出てから2分以内に画像をクリックしてファイルをダウンロードしてください(青緑赤は選択してください)。
+      「data_xxx.zip」というファイルがダウンロードされ、解凍すると「tmp」フォルダの中に結果が入っています
+    </p>
+    <form class="fetchForm_before">
+      <p>
+        元のファイル(比較対象のファイル)<br />
+        <input
+          type="file"
+          name="pdf_before"
+          accept=".jpg,.pdf"
+          required
+          size="30"
+        />
+      </p>
+      <p>
+        <input
+          type="button"
+          value="①送信する"
+          class="btn_before"
+          style="background-color: #ccccff"
+          onmouseover="this.style.background='#ccffcc'"
+          onmouseout="this.style.background='#ccccff'"
+          onclick="alert('元のファイルを送信しました');"
+        />
+      </p>
+    </form>
+    <script src="js/post_fetch_before.js"></script>
+    <form class="fetchForm_after">
+      <p>
+        最新のファイル<br />
+        <input
+          type="file"
+          name="pdf_after"
+          accept=".jpg,.pdf"
+          required
+          size="30"
+        />
+      </p>
+      <p>
+        <input
+          type="button"
+          value="②送信する"
+          class="btn_after"
+          style="background-color: #ccccff"
+          onmouseover="this.style.background='#ccffcc'"
+          onmouseout="this.style.background='#ccccff'"
+          onclick="alert('最新のファイルを送信しました');"
+        />
+      </p>
+    </form>
+    <script src="js/post_fetch_after.js"></script>
+    <p>
+      <b>利用状態</b><br />
+      <img
+        src="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/status/status.png"
+        alt="利用状態"
+        width="450"
+      />
+    </p>
+    <p>
+      <b>結果</b><br />
+      青色で表示<br />
+      <a
+        href="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/data_blue.zip"
+      >
+        <img
+          src="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/output-file-blue/01.jpg"
+          alt="青色で表示"
+          width="150"
+        /> </a
+      ><br />
+      赤色で表示<br />
+      <a
+        href="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/data_red.zip"
+      >
+        <img
+          src="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/output-file-red/01.jpg"
+          alt="赤色で表示"
+          width="150"
+        /> </a
+      ><br />
+      緑色で表示<br />
+      <a
+        href="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/data_green.zip"
+      >
+        <img
+          src="https://pdf-difference-bucket.s3.ap-northeast-1.amazonaws.com/result/output-file-green/01.jpg"
+          alt="緑色で表示"
+          width="150"
+        />
+      </a>
+    </p>
+    <p>
+      <b>注意点</b><br />
+      1. PDF ファイル名に「before」「after」を入れないでください<br />
+      2.
+      1ファイル6MB以上のファイルは送信できないので、予め圧縮して添付してください<br />
+      3.
+      間違ったファイルを選択した場合は、再度「ファイルを選択」から選択してください<br />
+      4.
+      「②送信する」ボタンを「①送信する」ボタンより先にクリックしてしまった場合は増田(kaito.masuda)にご連絡ください<br />
+      5.
+      「送信する」ボタンで送信した後に再度同じ「送信する」ボタンをクリックするとおかしな挙動を現状起こします。扱いにご注意ください<br />
+      6.
+      「①送信する」をクリックした後に、本ツールの使用を止めた場合も、次の利用時に現状変な挙動を起こします。増田(kaito.masuda)にご連絡ください
+    </p>
+    <small>
+      &nbsp;&nbsp;&nbsp;&nbsp;© 2025 Ezaki Glico Co., Ltd. Digital Buisiness.
+      All Rights Reserved.
+    </small>
+  </body>
+</html>

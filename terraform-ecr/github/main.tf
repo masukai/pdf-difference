@@ -64,6 +64,22 @@ data "aws_iam_policy_document" "github_action_role_policy_document" {
     ]
     resources = ["*"]
   }
+  statement {
+    sid    = "S3Access"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:DeleteObject",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.name}-bucket/*", # 地の文
+      "arn:aws:s3:::${var.name}-bucket",
+      "arn:aws:s3:::${var.name}-hosting-bucket/*", # 地の文
+      "arn:aws:s3:::${var.name}-hosting-bucket",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "github_action_role_policy_attachment" {

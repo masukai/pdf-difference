@@ -39,11 +39,11 @@ data "aws_iam_policy_document" "allow_access_s3_role_policy" {
 }
 
 resource "aws_iam_policy" "allow_access_s3" {
-  name   = "test_s3_policy"
+  name   = "allow_s3_policy"
   policy = data.aws_iam_policy_document.allow_access_s3_role_policy.json
 }
 
-resource "aws_iam_role_policy_attachment" "test_s3" {
+resource "aws_iam_role_policy_attachment" "allow_s3" {
   role       = aws_iam_role.assume_role.name
   policy_arn = aws_iam_policy.allow_access_s3.arn
 }
